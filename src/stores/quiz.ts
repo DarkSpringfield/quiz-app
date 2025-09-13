@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { Question } from '@/types/question'
+import type { Question } from '../types/question'
 
 export const useQuizStore = defineStore('quiz', () => {
   const allQuestions = ref<Question[]>([])
@@ -23,7 +23,7 @@ export const useQuizStore = defineStore('quiz', () => {
     if (cat === 'Alle') {
       questions.value = allQuestions.value
     } else {
-      questions.value = allQuestions.value.filter(q => q.category === cat)
+      questions.value = allQuestions.value.filter((q: any) => q.category === cat)
     }
     currentIndex.value = 0
     score.value = 0
@@ -41,7 +41,7 @@ export const useQuizStore = defineStore('quiz', () => {
   }
 
   const categories = computed(() => {
-    const cats = new Set(allQuestions.value.map(q => q.category))
+    const cats = new Set(allQuestions.value.map((q: any)=> q.category))
     return ['Alle', ...cats]
   })
 
