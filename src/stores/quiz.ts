@@ -1,61 +1,48 @@
-import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-import type { Question } from '../types/question'
+import { defineStore } from "pinia";
+import { fetchQuestions, saveResult, type Question } from "../services/api";
 
-export const useQuizStore = defineStore('quiz', () => {
-  const allQuestions = ref<Question[]>([])
-  const questions = ref<Question[]>([]) // aktuell gefilterte
-  const currentIndex = ref(0)
-  const score = ref(0)
-  const selectedCategory = ref<string>('Alle')
-
-  const currentQuestion = computed(() => questions.value[currentIndex.value])
-
-  function loadQuestions(qs: Question[]) {
-    allQuestions.value = qs
-    questions.value = qs
-    currentIndex.value = 0
-    score.value = 0
-  }
-
-  function filterByCategory(cat: string) {
-    selectedCategory.value = cat
-    if (cat === 'Alle') {
-      questions.value = allQuestions.value
-    } else {
-      questions.value = allQuestions.value.filter((q: any) => q.category === cat)
+export const useQuizStore = defineStore('quiz', {
+    state: () => ({
+        allQuestions: [] as Question[],
+        questions: [] as Question[],
+        currentIndex: 0,
+        score: 0,
+        username: '',
+    }),
+    getters: {
+      currentQuestion: (state) => state.questions[state.currentIndex],
+      categories: (state) => ['Alle', ...new Set(state.allQuestions.map(q => q.category))]
+    },
+    actions: {
+      async loadFromApi() {
+        this.allQuestions = await fetchQuestions()
+        this.questions = this.allQuestions
+        this.currentIndex = 0
+        this.score
+      },
+      filterByCategory(cat: string) {
+        if(cat === 'Alle') {
+          this.questions = this.allQuestions
+        } else {
+          this.questions = this.allQuestions.filter(q => q.category === cat) 
+        }
+        this.currentIndex = 0;
+      },
+      answer(i: number) {
+        if(this.currentQuestion && i === this.currentQuestion.correctIndex) {
+          this.score++
+        }
+        this.currentIndex++
+      },
+      async submitResult() {
+        if(this.username) {
+          await saveResult(this.username, this.score)
+        }
+      },
+      reset() {
+        this.questions = []
+        this.currentIndex = 0;
+        this.score = 0;
+      }
     }
-    currentIndex.value = 0
-    score.value = 0
-  }
-
-  function answer(choiceIndex: number) {
-    if (!currentQuestion.value) return
-    if (currentQuestion.value.correctIndex === choiceIndex) score.value++
-    currentIndex.value++
-  }
-
-  function reset() {
-    currentIndex.value = 0
-    score.value = 0
-  }
-
-  const categories = computed(() => {
-    const cats = new Set(allQuestions.value.map((q: any)=> q.category))
-    return ['Alle', ...cats]
-  })
-
-  return {
-    allQuestions,
-    questions,
-    currentIndex,
-    score,
-    selectedCategory,
-    currentQuestion,
-    categories,
-    loadQuestions,
-    filterByCategory,
-    answer,
-    reset,
-  }
 })
