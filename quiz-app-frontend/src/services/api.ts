@@ -1,7 +1,7 @@
 export interface Question {
     id: number,
     category: string,
-    text: string,
+    frage: string,
     options: string[]
     correctIndex: number,
     timeLimit: number
@@ -31,7 +31,7 @@ export async function saveResult(username: string, score: number) {
 
 export async function addQuestion(question: {
         category: string,
-        text: string,
+        frage: string,
         options: string[]
         correctIndex: number,
         timeLimit: number

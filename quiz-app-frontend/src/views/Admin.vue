@@ -15,7 +15,7 @@
         <!-- Frage -->
         <div>
           <label class="block mb-1">Frage</label>
-          <textarea v-model="text" class="w-full px-3 py-2 rounded bg-gray-800 text-white"></textarea>
+          <textarea v-model="frage" class="w-full px-3 py-2 rounded bg-gray-800 text-white"></textarea>
         </div>
         <!-- Optionen -->
         <div v-for="(opt, idx) in options" :key="idx">
@@ -134,7 +134,7 @@ import { ref, computed, onMounted } from 'vue'
 import { addQuestion, fetchQuestions, deleteQuestion, updateQuestion } from '../services/api'
 
 const category = ref('')
-const text = ref('')
+const frage = ref('')
 const options = ref(['', '', '', ''])
 const correctIndex = ref(0)
 const timeLimit = ref(30)
@@ -152,7 +152,7 @@ const filteredQuestions = computed(() => {
   const term = search.value.toLowerCase()
   return questions.value.filter(
     q =>
-      q.text.toLowerCase().includes(term) ||
+      q.frage.toLowerCase().includes(term) ||
       q.category.toLowerCase().includes(term)
   )
 })
@@ -173,7 +173,7 @@ async function loadQuestions() {
   }
 }
 
-onMounted(loadQuestions)
+onMounted(loadQuestions())
 
 async function submitQuestion() {
   success.value = false
@@ -182,7 +182,7 @@ async function submitQuestion() {
     if (editingId.value) {
       await updateQuestion(editingId.value, {
         category: category.value,
-        text: text.value,
+        frage: frage.value,
         options: options.value,
         correctIndex: correctIndex.value,
         timeLimit: timeLimit.value
@@ -190,7 +190,7 @@ async function submitQuestion() {
     } else {
       await addQuestion({
         category: category.value,
-        text: text.value,
+        frage: frage.value,
         options: options.value,
         correctIndex: correctIndex.value,
         timeLimit: timeLimit.value
@@ -207,7 +207,7 @@ async function submitQuestion() {
 function editQuestion(q: any) {
   editingId.value = q.id
   category.value = q.category
-  text.value = q.text
+  frage.value = q.frage
   options.value = [...q.options]
   correctIndex.value = q.correctIndex
   timeLimit.value = q.timeLimit
@@ -231,7 +231,7 @@ async function removeQuestion(id: number) {
 function resetForm() {
   editingId.value = null
   category.value = ''
-  text.value = ''
+  frage.value = ''
   options.value = ['', '', '', '']
   correctIndex.value = 0
   timeLimit.value = 30

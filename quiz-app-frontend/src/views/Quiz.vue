@@ -4,7 +4,7 @@
       <!-- Frage + Timer -->
       <div class="bg-brand-black rounded-2xl shadow p-6 w-full text-center mb-6">
         <h2 class="text-2xl md:text-3xl font-semibold mb-2 text-brand-violet">
-          {{ question.text }}
+          {{ question.frage }}
         </h2>
         <p class="text-sm md:text-base text-gray-300 mb-4">
           Kategorie: {{ question.category }}

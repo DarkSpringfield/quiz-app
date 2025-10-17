@@ -13,7 +13,7 @@
           id="category"
           v-model="selected"
           @change="onCategoryChange"
-          class="w-full rounded-lg border-gray-600 bg-brand-black text-white focus:border-brand-violet focus:ring-brand-violet"
+          class="px-6 py-3 w-full rounded-lg border-gray-600 bg-brand-black text-white focus:border-brand-violet focus:ring-brand-violet"
         >
           <option v-for="cat in categories" :key="cat">{{ cat }}</option>
         </select>

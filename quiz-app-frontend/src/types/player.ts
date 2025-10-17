@@ -4,5 +4,8 @@ export interface Player {
     email: String
     password: String
     rating: Number
+    points: Number
+    totalGames: Number
+    wonGames: Number
     isAdmin: Boolean
 }
