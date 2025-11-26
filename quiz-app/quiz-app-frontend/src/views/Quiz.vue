@@ -31,6 +31,9 @@
             </button>
           </li>
         </ul>
+        <p v-if="frageRichtig" class="mt-6 text-green-400 font-semibold text-center">
+          {{ question.options[quiz.currentQuestion.correctIndex] }} ist die richtige Antwort! <button @click="nextQuestion"">Nächste Frage</button>
+        </p>
         <p class="text-center text-sm text-gray-400 mt-6">
           Frage {{ quiz.currentIndex + 1 }} / {{ quiz.questions.length }}
         </p>
@@ -49,6 +52,8 @@
 import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter } from 'vue-router'
 import { useQuizStore } from '../stores/quiz'
+
+const frageRichtig = ref(false);
 
 const quiz = useQuizStore()
 const router = useRouter()
@@ -73,6 +78,7 @@ function startTimer() {
 }
 
 function select(i: number) {
+  frageRichtig.value = true;
   quiz.answer(i)
   nextQuestion()
 }

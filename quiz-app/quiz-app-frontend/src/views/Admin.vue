@@ -84,7 +84,7 @@
           >
             <div>
               <div class="font-semibold">{{ q.category }}</div>
-              <div>{{ q.text }}</div>
+              <div>{{ q.frage }}</div>
               <div class="text-sm text-gray-400">
                 Zeitlimit: {{ q.timeLimit }}s – Richtige Antwort: {{ q.options[q.correctIndex] }}
               </div>
@@ -130,9 +130,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { addQuestion, fetchQuestions, deleteQuestion, updateQuestion } from '../services/api'
+import { ref, computed, onMounted, watch } from 'vue'
+import {
+  addQuestion,
+  fetchQuestions,
+  deleteQuestion,
+  updateQuestion,
+} from '../services/api'
 
+// Formular-States
 const category = ref('')
 const frage = ref('')
 const options = ref(['', '', '', ''])
@@ -140,77 +146,127 @@ const correctIndex = ref(0)
 const timeLimit = ref(30)
 const success = ref(false)
 const error = ref('')
+
+// Daten / Edit-State
 const questions = ref<any[]>([])
 const editingId = ref<number | null>(null)
 
 // Suche & Pagination
 const search = ref('')
 const currentPage = ref(1)
-const pageSize = ref(5) // Anzahl pro Seite
+const pageSize = ref(5) // items pro Seite
 
+// --- Hilfs-Funktion: sichere Normalisierung eines Frage-Objekts ---
+// Manche Antworten/Backends liefern `text`, andere `frage` etc.
+// Wir machen daraus immer eine einheitliche Form.
+function normalizeQuestion(raw: any) {
+  return {
+    id: raw.id ?? raw.ID ?? raw.id_question ?? null,
+    category: raw.category ?? raw.kategorie ?? '',
+    // unterstütze sowohl 'text' als auch 'frage' als Feldname
+    frage: (raw.text ?? raw.frage ?? raw.question ?? '').toString(),
+    options: Array.isArray(raw.options) ? raw.options : (raw.options ? JSON.parse(raw.options) : []),
+    correctIndex: raw.correctIndex ?? raw.correct_index ?? raw.correct ?? 0,
+    timeLimit: raw.timeLimit ?? raw.time_limit ?? raw.time ?? 15,
+    // falls weitere Felder nötig: raw.meta etc.
+  }
+}
+
+// --- Laden der Fragen ---
+async function loadQuestions() {
+  success.value = false
+  error.value = ''
+  try {
+    const res = await fetchQuestions()
+    // Debug: was kommt wirklich vom API-Call?
+    console.log('API response for fetchQuestions():', res)
+
+    // Falls API ein { data: [...] } zurückgibt, entpacken
+    const arr = Array.isArray(res) ? res : (res.data && Array.isArray(res.data) ? res.data : [])
+
+    // Normalisieren und in reactive array schreiben
+    questions.value = arr.map(normalizeQuestion)
+    console.log('normalized questions:', questions.value)
+
+    // reset pagination
+    currentPage.value = 1
+  } catch (err: any) {
+    error.value = err?.message ?? String(err)
+    console.error('loadQuestions error:', err)
+  }
+}
+
+// wichtig: onMounted mit Funktionsreferenz (nicht mit Aufruf!)
+onMounted(loadQuestions)
+
+// --- Filter / Pagination (robust gegen undefined) ---
 const filteredQuestions = computed(() => {
-  const term = search.value.toLowerCase()
-  return questions.value.filter(
-    q =>
-      q.frage.toLowerCase().includes(term) ||
-      q.category.toLowerCase().includes(term)
-  )
+  const term = (search.value ?? '').toString().trim().toLowerCase()
+  if (!term) return questions.value
+
+  // sichere Filter-Funktion: prüft Felder vor Aufruf von toLowerCase
+  return questions.value.filter(q => {
+    const txt = (q.text ?? '').toString().toLowerCase()
+    const cat = (q.category ?? '').toString().toLowerCase()
+    return txt.includes(term) || cat.includes(term)
+  })
 })
 
 const totalPages = computed(() => Math.max(1, Math.ceil(filteredQuestions.value.length / pageSize.value)))
 
 const paginatedQuestions = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
+  // clamp currentPage
+  const cp = Math.min(Math.max(1, currentPage.value), totalPages.value)
+  const start = (cp - 1) * pageSize.value
   return filteredQuestions.value.slice(start, start + pageSize.value)
 })
 
-async function loadQuestions() {
-  try {
-    questions.value = await fetchQuestions()
-    currentPage.value = 1
-  } catch (err: any) {
-    error.value = err.message
-  }
-}
+// Wenn sich filteredQuestions ändert, stelle sicher, dass currentPage <= totalPages
+watch(filteredQuestions, () => {
+  if (currentPage.value > totalPages.value) currentPage.value = totalPages.value
+})
 
-onMounted(loadQuestions())
+// Wenn search geändert wird, zurück auf Seite 1
+watch(search, () => {
+  currentPage.value = 1
+})
 
+// --- CRUD Aktionen (verwenden API-Wrapper) ---
 async function submitQuestion() {
   success.value = false
   error.value = ''
   try {
-    if (editingId.value) {
-      await updateQuestion(editingId.value, {
-        category: category.value,
-        frage: frage.value,
-        options: options.value,
-        correctIndex: correctIndex.value,
-        timeLimit: timeLimit.value
-      })
-    } else {
-      await addQuestion({
-        category: category.value,
-        frage: frage.value,
-        options: options.value,
-        correctIndex: correctIndex.value,
-        timeLimit: timeLimit.value
-      })
+    const payload = {
+      category: category.value,
+      // API erwartet möglicherweise 'text' statt 'frage' — sende 'text'
+      frage: frage.value,
+      options: options.value,
+      correctIndex: correctIndex.value,
+      timeLimit: timeLimit.value,
     }
+
+    if (editingId.value) {
+      await updateQuestion(editingId.value, payload)
+    } else {
+      await addQuestion(payload)
+    }
+
     success.value = true
     resetForm()
     await loadQuestions()
   } catch (err: any) {
-    error.value = err.message
+    error.value = err?.message ?? String(err)
+    console.error('submitQuestion error:', err)
   }
 }
 
 function editQuestion(q: any) {
   editingId.value = q.id
   category.value = q.category
-  frage.value = q.frage
-  options.value = [...q.options]
-  correctIndex.value = q.correctIndex
-  timeLimit.value = q.timeLimit
+  frage.value = q.text
+  options.value = Array.isArray(q.options) ? [...q.options] : ['', '', '', '']
+  correctIndex.value = q.correctIndex ?? 0
+  timeLimit.value = q.timeLimit ?? 30
 }
 
 function cancelEdit() {
@@ -218,13 +274,13 @@ function cancelEdit() {
 }
 
 async function removeQuestion(id: number) {
-  if (confirm('Frage wirklich löschen?')) {
-    try {
-      await deleteQuestion(id)
-      await loadQuestions()
-    } catch (err: any) {
-      error.value = err.message
-    }
+  if (!confirm('Frage wirklich löschen?')) return
+  try {
+    await deleteQuestion(id)
+    await loadQuestions()
+  } catch (err: any) {
+    error.value = err?.message ?? String(err)
+    console.error('removeQuestion error:', err)
   }
 }
 

@@ -8,10 +8,10 @@ module.exports = {
     extend: {
       colors: {
         brand: {
-          violet: '#7C3AED',   // kräftiges Violett
-          violetDark: '#5B21B6', // dunkler Violett-Ton für Hover
-          black: '#000000',    // Schwarz
-          grayDark: '#1A1A1A', // fast schwarz für Hintergründe
+          primary: '#7C3AED',
+          secondary: '#5B21B6',
+          black: '#000000',
+          grayDark: '#1A1A1A',
         },
       },
     },
